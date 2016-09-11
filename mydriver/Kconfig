@@ -1,0 +1,24 @@
+
+#
+# My Bus Devices
+#
+
+
+config SCC_BUS
+	tristate "MY BUS driver support"
+	default m
+	help
+	  Driver supporting the my bus for sunxi
+	  platforms.
+
+config SCC_DEVICE
+	tristate "MY Device "
+	default m
+	help
+	  Driver supporting the my bus for sunxi
+
+config SCC_DRIVER
+	tristate "MY Driver "
+	default m
+	help
+	  Driver supporting the my bus for sunxi
