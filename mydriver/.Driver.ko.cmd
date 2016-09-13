@@ -1,1 +1,0 @@
-cmd_drivers/mydriver/Driver.ko := arm-openwrt-linux-muslgnueabi-ld -EL -r  -T /mnt/hdd2/scc153/tina2.0/Tina-V2/lichee/linux-3.4/scripts/module-common.lds --build-id  -o drivers/mydriver/Driver.ko drivers/mydriver/Driver.o drivers/mydriver/Driver.mod.o
