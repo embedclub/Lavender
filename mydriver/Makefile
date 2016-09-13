@@ -7,4 +7,5 @@
 obj-$(CONFIG_SCC_BUS)		+= Bus.o
 obj-$(CONFIG_SCC_DEVICE)		+= Device.o
 obj-$(CONFIG_SCC_DRIVER)		+= Driver.o
+obj-$(CONFIG_SCC_TEST_CHAR)		+= test.o	
 

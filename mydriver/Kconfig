@@ -2,7 +2,7 @@
 #
 # My Bus Devices
 #
-
+menu "My Bus Device"
 
 config SCC_BUS
 	tristate "MY BUS driver support"
@@ -22,3 +22,17 @@ config SCC_DRIVER
 	default m
 	help
 	  Driver supporting the my bus for sunxi
+
+config SCC_KOBJECT
+	tristate "kobject test"
+	default m
+	help
+	  This is a kobject
+
+config SCC_TEST_CHAR
+	tristate "char device test"
+	default m
+	help
+	  This is an example for learn char device
+
+endmenu

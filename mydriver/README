@@ -1,0 +1,368 @@
+总线驱动的学习；
+驱动分为：
+	字符设备驱动
+	块设备驱动
+	网络设备驱动
+
+Linux设备驱动中常用的机制和内核资源
+	中断
+	定时器
+	并发
+
+驱动模块
+	module_init
+	module_exit
+
+	insmod 
+	rmmod
+	lsmod
+
+机制和策略
+
+字符设备
+	像字节流一样来存取的设备(如同文件)，对它的读写是以字节为单位
+	需要实现open，close，read和write等系统调用
+	一切设备皆文件 /dev/led   /dev/ttySAC0(设备文件)
+	只能顺序访问数据通道
+
+块设备
+	块设备上的数据以块的形式存放
+	块设备提供的接口与字符设备一样 /dev/mtdblock0
+	与字符设备的区别在于内核内部管理数据的形式
+	需要提供挂载点 mount
+
+网络设备
+	特殊的一类设备，
+	网卡
+	网络接口负责发送和接收报文
+	内核调用一套和数据包有关的函数  socket编程
+
+
+分析驱动的代码步骤
+先找到module_init和module_exit这两个宏；之后找module_init()里面的函数，进而开始分析这个函数。
+	insmod	---module_init     --只能用于模块加载和卸载时调用
+	rmmod	---module_exit
+	printf(用户使用) VS printk(内核使用)
+
+编译内核模块
+$(MAKE) -C $(KERNELDIR) M=$(PWD) modules
+
+加载内核模块
+	insmod ./hello.ko
+
+查看内核中已装载的模块
+	lsmod | grep hello
+
+卸载内核模块
+	rmmod hello.ko
+
+static修饰模块加载函数，限制函数只能在当前文件可见。
+__init和__exit的功能释放占用的资源(还需要补充哈)
+	表明该函数只是在初始化时使用，加载后，丢掉这个初始化函数，释放占用的内存
+	标识这个代码只用于模块卸载或系统停止时调用，其他任何时候调用都是错误。
+
+EXPORT_SYMBOL()---模块导出符号
+	内核模块可以导出符号(symbol,对应于函数或变量)到内核
+	其他模块可以使用本模块中的变量或函数
+
+module_param(参数名，参数类型，参数读、写权限)
+
+内核支持的模块参数类型包括：
+	byte，short，ushort，int，uint，long，ulong，charp，bool
+
+装载模块时改变参数：
+	可通过insmod或modprobe
+	insmod hello_ext.ko howmany=5 whom="Students"
+	modprobe也可以从它的配置文件(/etc/modprobe.conf)读取参数
+
+insmod和modprobe主要区别
+	modprobe会考虑要装载的模块是否引用了一些当前内核不存在的符号。如果有这类引用，modprobe会在当前模块路径中搜索定义了这些符号的其他模块，并同时将这些模块也装载到内核。如果在这种情况下使用insmod，该命令则会失败，并在系统日志文件中记录“unresolved symbol(未解析的符号)”消息。
+
+字符设备
+	1、设备号：主设备号 次设备号
+	2、基本的成员函数：module_init和module_exit open close write read
+	3、基本的结构 
+	4、开发方法 
+
+字符设备开发的基本步骤
+	确定主设备号和次设备号
+
+	实现字符驱动程序
+		实现file_operations结构体
+		实现初始化函数，注册字符设备
+		实现销毁函数，释放字符设备
+		实现字符设备其他基本成员函数
+
+	创建设备文件节点
+
+主设备号 ---内核识别一个设备的标识。(正数占12bit，通常使用1到255)
+次设备号 ---由内核使用，用于正确确定设备文件所指的设备(,一般使用0到255)
+
+设备编号的内部表达
+	dev_t类型(32位)   主设备号12位和次设备号20位
+	MAJOR(dev_t)  and  MINOR(dev_t)
+	MKDEV(int major, int minor) //通过主次设备号来生成dev_t
+	
+以上宏调用在内核源码中如此定义：
+	#define MINORBITS       20 
+	#define MINORMASK       ((1U << MINORBITS) - 1) 
+        //(1<<20 -1) 此操作后，MINORMASK宏的低20位为1，高12位为0 
+	#define MAJOR(dev)      ((unsigned int) ((dev) >> MINORBITS)) 
+	#define MINOR(dev)      ((unsigned int) ((dev) & MINORMASK)) 
+	#define MKDEV(ma,mi)    (((ma) << MINORBITS) | (mi))
+
+分配主设备号
+	手工分配主设备号：找一个内核没有使用的主设备号来使用。
+
+	#include <linux/fs.h>
+	int register_chrdev_region(dev_t first, unsigned int count, char *name);
+	dev_t first ----要分配的设备编号范围的起始值，次设备号经常为0；
+	unsigned int count ----所请求的连续设备编号的个数；
+	char *name ----和该编号范围关联的设备名称；
+
+	动态分配设备号
+
+	#include <linux/fs.h>
+	int alloc_chrdev_region(dev_t *dev, unsigned int firstminor, unsigned int count, char *name);
+	dev_t *dev ----输出的设备号
+	unsigned int firstminor ----要使用的被请求的第一个次设备号
+
+	释放设备号
+	void unregister_chrdev_region(dev_t dev, unsigned int count);
+	通常在模块的清除函数中调用
+
+实现字符驱动程序
+	cdev结构体
+		使用cdev结构体描述字符设备，cdev的定义在 <linux/cdev.h> 中可找到，
+	struct cdev
+	{
+		struct kobject kobj;	/*内嵌的kobject对象 */
+		struct module *owner;	/*所属模块 */
+		struct file_operations *ops; /*文件操作结构体, 在写驱动时，其结构体内的大部分函数要被实现 */
+		struct list_head list;
+		dev_t dev;		/*设备号 */
+		unsigned int count;
+	};
+
+操作cdev的函数
+	void cdev_init(struct cdev *cdev, struct file_operations *fops);//用于初始化已分配的cdev结构，并建立cdev和file_operation之间的连接
+	
+	struct cdev *cdev_alloc(void);//动态申请一个cdev内存
+
+	int cdev_add(struct cdev *dev, dev_t num, unsigned count);//注册设备，通常发生在驱动模块的加载函数中 
+
+	void cdev_del(struct cdev *cdev);//注销设备，通常发生在驱动模块的卸载函数中
+
+file_operations结构体
+	字符设备驱动和内核的接口：在include/linux/fs.h定义
+	字符驱动只要实现一个file_operations结构体
+	当注册到内核中，内核就有了操作此设备的能力。
+
+file_operations的主要成员
+	struct module *owner:指向模块自身：THIS_MODULE
+	open:打开设备
+	release:关闭设备
+	read:从设备上读数据
+	write:向设备上写数据
+	ioctl:IO控制函数
+	llseek:定位当前读写位置指针
+	mmap:映射设备空间到进程的地址空间
+
+file结构体
+	file结构
+		file_operations结构相关的一个结构体
+		描述一个正在打开的设备文件
+	成员：
+		loff_t f_pos：当前读/写位置
+		unsigned int f_flags：
+			标识文件打开时，是否可读或可写
+			O_RDONLY
+			O_NONBLOCK
+
+	struct file_operations *f_op
+		文件相关的操作，指向所实现的struct file_operations
+	void *private_data:
+		私有数据指针。驱动程序可以将这个字段用于任何目的或者忽略这个字段
+
+inode结构体
+	内核用inode结构在内部表示文件
+	inode与file的而区别
+		file表示打开的文件描述
+		多个表示打开的文件描述符的file结构，可以指向单个inode结构
+
+inode结构中的两个主要字段
+	dev_t i_dev；
+		对表示设备文件的inode结构，该字段包含了真正的设备编号
+	struct cdev *i_cdev;
+		struct cdev是表示字符设备的内核的内部结构
+		当inode指向一个字符设备文件时，该字段包含了指向struct cdev结构的指针
+
+从一个inode中获得主设备号和次设备号：
+	unsigned int iminor(struct inode *inode);
+	unsigned int imajor(struct inode *inode);
+
+注册设备：在模块或驱动初始化时调用	
+	void cdev_init(struct cdev *cdev, struct file_operations *fops);
+
+	int cdev_add(struct cdev *dev, dev_t num, unsigned count);
+
+注册也分为三个步骤：
+	1)分配cdev； 	方法一：直接定义：struct cdev test_cdev；方法二：调用函数:struct cdev* cdev_alloc(void)  struct cdev* test_cdev;  test_cdev = cdev_alloc();
+	2)初始化cdev；	void cdev_init(struct cdev *cdev, const struct file_operations *fops)；
+	3)添加cdev；	int cdev_add(struct cdev *cdev, dev_t dev, unsigned count)；
+
+
+注销设备:在模块卸载时调用
+	void cdev_del(struct cdev *cdev);
+
+加载模块：
+1）申请一个设备号，下面注册设备时需要用。
+2）注册设备。
+2.1分配一个cdev结构体。
+2.2初始化cdev结构体，使结构体与文件操作结构体(fops)对应起关系。
+2.3添加cdev结构体到内核。
+卸载模块：
+1)注销设备，即从内核中删除指定的cdev。
+2)注销设备号。
+
+
+在linux系统进程中，分为内核空间和用户空间，当一个任务（进程）执行系统调用而陷入内核代码中执行时，我们就称进程处于内核运行态（内核态）。在内核态下，CPU可执行任何指令。当进程在执行用户自己的代码时，则称其处于用户运行态（用户态）。用户态不能访问内核空间，包括代码和数据。所有进程的内核空间（3G－4G）都是共享的。当我们在用户空间调用open之后，会产生一个软中断，然后通过系统调用进入内核空间。通过系统调用号，我们就可以跳转到该中断例程的入口地址。
+
+设备号的申请：register_chrdev_region
+int register_chrdev_region(dev_t from, unsigned count, const char *name)
+使用：
+指定从设备号from开始，申请count个设备号，在/proc/devices中的名字
+为name。
+返回值：
+成功返回0，失败返回错误码。
+
+使用动态分配设备号函数：
+int alloc_chrdev_region(dev_t *dev, unsigned baseminor, unsigned count, const char *name)
+使用：
+动态申请从次设备号baseminor开始的count个设备号，在/proc/devices中的名字为name，并通过dev指针把分配到的设备号返回给调用函数者。
+返回值：
+成功返回0，失败返回错误码。
+
+模块卸载时，释放设备号
+void unregister_chrdev_region(dev_t from, unsigned count)
+使用：释放从from开始count个设备号。
+
+cat /proc/devices
+	静态设备的主设备号如何查找，通过上述cat /proc/devices 查询已经被使用的主设备号，去掉使用的号码，剩下的都可以作为静态的主设备号使用。
+
+创建一个设备文件，使用命令mknod:
+    用法：mknod filename type major minor
+	filename：设备文件名
+	type：设备文件类型
+	major：主设备号
+	minor：次设备号
+
+
+open实现
+	int xxx_open(struct inode *inode, struct file *filp);
+	模块使用计数加1
+	识别次设备号
+	硬件操作
+		检查设备相关错误(诸如设备未就绪或类似的硬件问题)
+		如果设备是首次打开，则对其初始化
+		如果有中断操作，申请中断处理函数
+
+关闭
+	int xxx_release(struct inode *inode, struct file *filp);
+	模块使用计数减1
+	释放由open分配的，保存在filp>private_data里的所有内容
+	硬件操作
+		如果申请了中断，则释放中断处理程序
+		在最后一次关闭操作时关闭设备
+
+read/write
+	内核中的memcpy ---copy_from_user和copy_to_user
+
+	用file_operations中的read和write模拟两件事：
+		1)从内核态通过read函数读取数据到用户态。
+		2)从用户态通过write函数读取数据到内核态。
+		
+
+驱动函数：ssize_t (*read) (struct file *filp, char __user *buff, size_t count, loff_t *offp);
+	char __user *buff
+		指向用户空间的缓冲区，这个缓冲
+		区或者保存将写入的数据，或者是
+		一个存放新读入数据的空缓冲区。
+
+与用户层的read对应：ssize_t read(int fd, void *buf, size_t count);
+用法：
+	从设备中读取数据，当用户层调用函数read时，对应的，内核驱动就会调用这个函数。
+参数：
+	struct file：file结构体，现在暂时不用，可以先不传参。
+	char __user：只看到__user就知道这是从用户态的指针，通过这个指针往用户态传数据。这是对应用户层的read函数的第二个参数void *buf。
+	size_t：写内核的人就是闲着喜欢编一些奇怪的类型，其实这只是unsigned int。对应应用层的read函数的第三个参数。
+	loff_t：这是用于存放文件的偏移量的，回想一下系统编程时，读写文件的操作都会使偏移量往后移。不过待会的代码先不实现，迟点会说。
+返回值：
+	当返回正数时，内核会把值传给应用程序的返回值。一般的，调用成功会返回成功读取的字节数。
+	如果返回负数，内核就会认为这是错误，应用程序返回-1。
+
+ssize_t write(struct file *filp, const char __user *buff, size_t count, loff_t *offp);
+	loff_t *offp
+		用户在文件中存取操作的位置
+
+与用户层的write对应：ssize_t write(int fd, const void *buf, size_t count);
+用法：
+	往设备写入数据，当用户层调用函数write时，对应的，内核驱动就会调用这个函数。
+参数：
+	struct file：file结构体，现在暂时不用，可以先不传参。
+	char __user：只看到__user就知道这是从用户态的指针，通过这个指针读取用户态的数据。这是对应用户层的write函数的第二个参数const void *buf。
+	size_t：写内核的人就是闲着喜欢编一些奇怪的类型，其实这只是unsigned int。对应用户层的write函数的第三个参数count。
+	loff_t：这是用于存放文件的偏移量的，回想一下系统编程时，读写文件的操作都会使偏移量往后移。不过待会的代码先不实现，迟点会说。
+返回值：
+	当返回正数时，内核会把值传给应用程序的返回值。一般的，调用成功会返回成功读取的字节数。
+	如果返回负数，内核就会认为这是错误，应用程序返回-1。	
+
+用户空间和内核空间之间的数据拷贝过程，
+	不能简单的用指针操作或者memcpy来进行数据拷贝
+		用户空间的数据是可以被换出的，会产生一个页面失效异常。
+		用户空间的地址无法在内核空间中使用。
+用户空间和内核空间之间进行数据拷贝的函数：
+	unsigned long copy_from_user(void *to, const void __user *from,unsigned long count);
+	unsigned long copy_to_user(void __user *to, const void *from, unsigned long count);
+	如果要复制的内存是简单类型，如char、int、long 等，
+		put_user()和get_user()
+
+使用copy_to_user()和copy_from_user()需包含头文件<asm/uaccess.h>
+	static inline unsigned long __must_check copy_to_user(void __user *to, const void *from, unsigned long n)
+	static inline unsigned long __must_check copy_from_user(void *to, const void __user *from, unsigned long n)
+用法：
+	和memcpy的参数一样，但它根据传参方向的不同分开了两个函数。
+	"to"是相对于内核态来说的。所以，to函数的意思是从from指针指向的数据将n个字节的数据传到to指针指向的数据。
+	"from"也是相对于内核来说的。所以，from函数的意思是从from指针指向的数据将n个字节的数据传到to指针指向的数据。
+返回值：
+	函数的返回值是指定要读取的n个字节中还剩下多少字节还没有被拷贝。
+注意：
+	一般的，如果返回值不为0时，调用copy_to_user的函数会返回错误号-EFAULT表示操作出错。当然也可以自己决定。
+
+ioctl函数
+	为设备驱动程序执行“命令”提供了一个特有的入口点。
+	用来设置或者读取设备的属性信息。
+函数指针：int (*ioctl) (struct inode *, struct file *, unsigned int, unsigned long);
+	int ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg);
+
+	unsigned int cmd  ----事先定义的IO控制命令代码
+	unsigned long arg ----arg为对应于cmd命令的参数
+
+cmd参数的定义
+	不推荐用0x1，0x2，0x3之类的值
+	Linux对ioctl()的cmd参数有特殊的定义
+
+设备类型(type) 序列号(number) 方向(direction) 数据尺寸(size)
+    8bit              8bit           2bit              13/14bit
+
+构造命令编号的宏：
+	_IO(type，nr)用于构造无参数的命令编号；
+	_IOR(type，nr，datatype)用于构造从驱动程序中读取数据的命令编号；
+	_IOW(type，nr，datatype)用于写入数据的命令；
+	_IOWR(type，nr，datatype)用于双向传输。
+		type和number位字段通过参数传入，而size位字段通过对datatype参数取
+		sizeof获得。
+
+面向对象思想和lseek的实现
+    结构体struct file和struct inode
+	
