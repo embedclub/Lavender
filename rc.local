@@ -1,0 +1,30 @@
+#This script is uesd by user
+#version 2.0
+
+mkdir /mnt/sd1
+mkdir /mnt/sd2
+
+[ -f /dev/mmcblk0 ] && mount /dev/mmcblk0 /mnt/sd1/
+[ $? -eq 0 ] && cd /mnt/sd2/ && chmod +x start.sh && ./start.sh
+
+[ -f /dev/mmcblk1p1 ] && mount /dev/mmcblk0p1 /mnt/sd2/
+[ $? -eq 0 ] && cd /mnt/sd2/ && chmod +x start.sh && ./start.sh
+
+
+
+
+#ls /mnt/sd1/*.wav >/playlist
+#ls /mnt/sd1/*.mp3 >>/playlist
+#ls /mnt/sd2/*.wav >>/playlist
+#ls /mnt/sd2/*.mp3 >>/playlist
+
+#/./myplay
+
+#ls /mnt/UDISK/*.wav >>/playlist
+#ls /mnt/UDISK/*.mp3 >>/playlist
+
+
+#/./fork-f  < /dev/null > /dev/null 2>1
+
+exit 0
+
