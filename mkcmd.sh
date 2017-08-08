@@ -704,13 +704,13 @@ function mklichee()
 	mk_info "board: $LICHEE_BOARD"
 	mk_info "output: out/${LICHEE_CHIP}/${LICHEE_PLATFORM}/${LICHEE_BOARD}"
 	mk_info "----------------------------------------"
-
+#检查环境
 	check_env
 
 	if [ ${SKIP_BR} -eq 0 ]; then
 		mkbr
 	fi
-
+#调用编译内核和生成文件系统的函数
 	mkkernel && mkrootfs $1
 
 	[ $? -ne 0 ] && return 1
