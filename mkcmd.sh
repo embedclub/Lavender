@@ -11,15 +11,16 @@
 
 # Notice:
 #   1. This script muse source at the top directory of lichee.
-
+#引用别处的配置文件内容
 BUILD_CONFIG=.buildconfig
+#测试当前CPU的核数
 cpu_cores=`cat /proc/cpuinfo | grep "processor" | wc -l`
 if [ ${cpu_cores} -le 8 ] ; then
 	LICHEE_JLEVEL=${cpu_cores}
 else
 	LICHEE_JLEVEL=`expr ${cpu_cores} / 2`
 fi
-
+#导出，供别的脚本使用
 export LICHEE_JLEVEL
 
 function mk_error()
@@ -39,6 +40,7 @@ function mk_info()
 
 # define importance variable
 LICHEE_TOP_DIR=`pwd`
+#{LICHEE_KERN_VER}和${LICHEE_ARCH}的定义来源于.buildconfig文件
 LICHEE_KERN_DIR=${LICHEE_TOP_DIR}/${LICHEE_KERN_VER}
 LICHEE_ARCH_DIR=${LICHEE_KERN_DIR}/${LICHEE_ARCH}
 LICHEE_TOOLS_DIR=${LICHEE_TOP_DIR}/tools
@@ -61,7 +63,7 @@ export LICHEE_KERN_DIR
 export LICHEE_ARCH_DIR
 export LICHEE_TOOLS_DIR
 export LICHEE_OUT_DIR
-
+#支持的平台定义
 platforms=(
 "android"
 "dragonboard"
@@ -69,6 +71,7 @@ platforms=(
 "camdroid"
 )
 #判断几个变量的值是否为空，为空值，即报错。-o是或的关系
+#下面的几个变量来自.buildconfig文件
 function check_env()
 {
 	if [ -z "${LICHEE_CHIP}" -o \
