@@ -11,7 +11,8 @@
 |:-------:|
 | [git忽略语法](https://github.com/github/gitignore) |
 | [内核源码下载链接](https://www.kernel.org/) |
-
+| [ 深入分析Linux内核源码](http://treelib.com/book-detail-id-33-aid-2158.html) |
+| [Linux Story](https://linuxstory.org/) |
 
 -------
 ## 后续内容
