@@ -6,9 +6,9 @@ ubuntu-14.04.05-64bit
 ```
 
 ## 安装方式
-
-```
 ①采用apt-get方式
+```
+
 sudo apt-get install libncurses5-dev gcc-arm-linux-gnueabi build-essential
 
 arm-linux-gnueabi-gcc --version
@@ -43,4 +43,28 @@ make –j2
 //使用4.7-gnueabi版本可以编译成功u-boot-2014.07版本；测试中发现gnueabihf版本编译有错误，没有细化解决。
 ```
 
+## 安装qemu
+```
+//Ubuntu操作系统上安装方法
+sudo apt-get install qemu
 
+```
+## 源码方式安装qemu
+
+①To download and build QEMU 2.11.0:
+```
+wget https://download.qemu.org/qemu-2.11.0.tar.xz
+tar xvJf qemu-2.11.0.tar.xz
+cd qemu-2.11.0
+./configure
+make
+```
+②To download and build QEMU from git:
+```
+git clone git://git.qemu.org/qemu.git
+cd qemu
+git submodule init
+git submodule update --recursive
+./configure
+make
+```
