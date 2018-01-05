@@ -16,7 +16,7 @@
 | [Qt资料大全](http://blog.csdn.net/liang19890820/article/details/51752029) |
 | [Linux-0.11](https://github.com/tinyclub/linux-0.11-lab/blob/master/README.md) |
 | [NoC相关的网站链接](https://www.douban.com/group/topic/2837287/) |
-|  |
+| [Linux论坛](https://www.linux.org/articles/) |
 
 
 -------
