@@ -21,3 +21,8 @@
 
 -------
 ## 后续内容
+
+|   资料链接   |
+|  :-------:  |
+| [几种Linux下嵌入式开发环境的介绍](https://mp.weixin.qq.com/s/iC9BHywtJ7Ap4KlgAyv0Fw) |
+| [盘点2017年最受开发者欢迎的10个Linux发行版](https://mp.weixin.qq.com/s/m84R-BHNK80h_C2ld5eQDQ) |
