@@ -25,6 +25,21 @@ git branch
 
 ```
 
+```
+git log
+#### 显示当前仓库更新的记录
+
+git log --oneline
+#### 一行显示log信息
+
+git log --author=xxx
+#### 查看某个作者提交的更新记录（代码提交记录）
+
+```
+
+
+
+
 ### git代理设置
 
 #### 设置
