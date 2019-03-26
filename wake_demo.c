@@ -112,9 +112,10 @@ void helloworld_exit(void)
         kobject_put(soc_kobj);
         sysfs_remove_group(soc_kobj, &my_attr_group);
     }
+    wakeup_source_unregister(ws);
 }
 
-MODULE_AUTHOR("chongchong sun");
+MODULE_AUTHOR("jack sun");
 MODULE_LICENSE("Dual BSD/GPL");
 module_init(helloworld_init);
 module_exit(helloworld_exit);
