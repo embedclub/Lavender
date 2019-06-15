@@ -1,0 +1,2 @@
+clean:
+	mkdir -p ./ddr/
